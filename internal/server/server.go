@@ -30,20 +30,23 @@ type handler struct {
 	db *db.DB
 }
 
+// codeDBUnavailable marks a failed readiness check (database unreachable).
+const codeDBUnavailable = 1001
+
 // healthCheck is a liveness probe: the process is up.
 func (h *handler) healthCheck(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	respond(c, http.StatusOK, gin.H{"status": "ok"})
 }
 
 // ready is a readiness probe: dependencies (the database) are reachable.
 func (h *handler) ready(c *gin.Context) {
 	if err := h.db.Ping(c.Request.Context()); err != nil {
-		c.JSON(http.StatusServiceUnavailable, gin.H{"status": "unavailable", "error": err.Error()})
+		respondError(c, http.StatusServiceUnavailable, codeDBUnavailable, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"status": "ready"})
+	respond(c, http.StatusOK, gin.H{"status": "ready"})
 }
 
 func ping(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	respond(c, http.StatusOK, gin.H{"message": "pong"})
 }
