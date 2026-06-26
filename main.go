@@ -1,19 +1,27 @@
 package main
 
 import (
+	"context"
 	"log"
 
+	"haves/internal/db"
 	"haves/internal/server"
 )
 
 func main() {
-	srv := server.New()
+	ctx := context.Background()
 
-	port := "8081"
+	database, err := db.New(ctx, db.DSNFromEnv())
+	if err != nil {
+		log.Fatalf("database connection failed: %v", err)
+	}
+	defer database.Close()
+
+	srv := server.New(database)
+
+	port := "8080"
 
 	if err := srv.Run(":" + port); err != nil {
 		log.Fatalf("server failed to start: %v", err)
-	} else {
-		log.Printf("server started on port %v", port)
 	}
 }

@@ -5,9 +5,30 @@ services:
       dockerfile: docker/dev/Dockerfile
       target: haves-dev
     ports:
-      - "8080:8080"
+      # Published host port comes from PORT in .env.development.local, which the
+      # justfile feeds to Compose via --env-file (env_file injects into the
+      # container but not into ${...} interpolation). The container always
+      # serves 8080 (the app's fixed listen port); :-8080 keeps this resolvable
+      # when no env file is supplied.
+      - "${PORT:-8080}:8080"
+    # Developer config (Postgres credentials, etc.) is read from the gitignored
+    # .env.development.local at the repo root. Path is relative to this compose
+    # file; required:false keeps the stack working if the file is absent.
+    env_file:
+      - path: ../../.env.development.local
+        required: false
     environment:
+      # Docker-topology overrides — these win over the env file (environment >
+      # env_file in Compose), so the file can carry host-oriented values
+      # (e.g. POSTGRES_HOST=localhost) without breaking the container: inside
+      # the network the app reaches Postgres by service name.
       - GIN_MODE=debug
+      - POSTGRES_HOST=postgres
+    depends_on:
+      # Wait until Postgres reports healthy before starting the app, otherwise
+      # the startup Ping fails and the process exits.
+      postgres:
+        condition: service_healthy
     volumes:
       # Bind-mount the repo root (two levels up from this compose file) for hot
       # reload. air (configured to poll) watches it and recompiles in place. The
@@ -19,3 +40,26 @@ services:
       # Anonymous volume shadows the bind mount at /app/tmp so air's compiled
       # binary lives on the container's (executable) fs, never on the host.
       - /app/tmp
+
+  postgres:
+    image: postgres:17-alpine
+    # Same source of truth as the app — credentials and db name come from
+    # .env.development.local so the two services can't drift apart.
+    env_file:
+      - path: ../../.env.development.local
+        required: false
+    ports:
+      # Exposed on the host so you can connect with psql/a GUI during dev.
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      # Use the configured role/db ($$ escapes to a literal $ so the shell in
+      # the container expands it from the env file values).
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:

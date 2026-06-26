@@ -42,14 +42,18 @@ check: fmt vet tidy
 
 # Dev compose file lives under docker/dev/.
 dev-compose := "docker compose -f docker/dev/docker-compose.yml -p haves-dev"
+# --env-file feeds .env.development.local to ${...} interpolation (e.g. the
+# published PORT). Only the `up` recipes need it; down/logs/sh resolve fine via
+# the in-file defaults.
+dev-env := "--env-file .env.development.local"
 
 # Start the dev stack with hot reload (foreground, logs attached).
 docker-dev:
-    {{dev-compose}} up --build
+    {{dev-compose}} {{dev-env}} up --build
 
 # Same, detached.
 docker-dev-d:
-    {{dev-compose}} up --build -d
+    {{dev-compose}} {{dev-env}} up --build -d
 
 # Stop and remove the dev stack.
 docker-dev-down:

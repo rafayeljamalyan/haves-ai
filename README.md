@@ -44,6 +44,47 @@ just test      # go test ./... -race
 just check     # fmt + vet + tidy
 ```
 
+## Configuration
+
+Config comes from environment variables. Copy the example file and edit it:
+
+```bash
+cp .env.example .env.development.local   # gitignored
+```
+
+The Docker dev stack reads this file two ways (both in
+`docker/dev/docker-compose.yml` + the justfile):
+
+- **`env_file`** injects the variables (Postgres credentials, etc.) into the
+  containers.
+- **`--env-file`** (added to the `docker-dev` recipes) feeds `${...}`
+  interpolation — specifically the published `PORT`, which `env_file` alone
+  can't reach.
+
+Compose overrides the container-specific values (`POSTGRES_HOST=postgres`) so
+the file can keep host-oriented defaults (`POSTGRES_HOST=localhost`) for native
+runs. The app itself reads its database config from the process environment via
+`internal/db`.
+
+| Variable            | Default     | Description                          |
+|---------------------|-------------|--------------------------------------|
+| `PORT`              | `8080`      | Published host port (container serves 8080) |
+| `DATABASE_URL`      | —           | Full Postgres DSN; overrides the parts below |
+| `POSTGRES_HOST`     | `localhost` | (in Docker: `postgres`)              |
+| `POSTGRES_PORT`     | `5432`      |                                      |
+| `POSTGRES_USER`     | `haves`     |                                      |
+| `POSTGRES_PASSWORD` | `haves`     |                                      |
+| `POSTGRES_DB`       | `haves`     |                                      |
+| `POSTGRES_SSLMODE`  | `disable`   |                                      |
+
+## Database
+
+The service connects to Postgres on startup (it fails fast if the database is
+unreachable). The dev compose stack runs a `postgres:17-alpine` container, and
+the app waits for it to report healthy before starting. In Docker the database
+is reachable at host `postgres`; from the host it's exposed on
+`localhost:5432`.
+
 ## Production image
 
 A dedicated multi-stage build (`docker/prod/Dockerfile`) on distroless (~24 MB):
@@ -55,13 +96,15 @@ just docker-run        # run it on :8080
 
 ## Endpoints
 
-| Method | Path             | Description     |
-|--------|------------------|-----------------|
-| GET    | `/health`        | Health check    |
-| GET    | `/api/v1/ping`   | Returns `pong`  |
+| Method | Path             | Description                    |
+|--------|------------------|--------------------------------|
+| GET    | `/health`        | Liveness — process is up       |
+| GET    | `/ready`         | Readiness — pings the database |
+| GET    | `/api/v1/ping`   | Returns `pong`                 |
 
 ```bash
 curl localhost:8080/health
+curl localhost:8080/ready
 curl localhost:8080/api/v1/ping
 ```
 
@@ -70,10 +113,12 @@ curl localhost:8080/api/v1/ping
 ```
 main.go                       # entrypoint
 internal/server/              # router & handlers
+internal/db/                  # Postgres connection pool (pgx) + env config
 docker/dev/Dockerfile         # dev image: base → haves-dev (air hot reload)
-docker/dev/docker-compose.yml # dev stack (bind mount + air hot reload)
+docker/dev/docker-compose.yml # dev stack (app + postgres, bind mount + air)
 docker/prod/Dockerfile        # prod image: build → distroless (static, non-root)
 .air.toml                     # hot-reload config
+.env.example                  # config template — copy to .env for host runs
 justfile                      # task runner
 ```
 
