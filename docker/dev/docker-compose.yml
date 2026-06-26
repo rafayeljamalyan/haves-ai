@@ -1,0 +1,21 @@
+services:
+  app:
+    build:
+      context: ../..
+      dockerfile: docker/dev/Dockerfile
+      target: haves-dev
+    ports:
+      - "8080:8080"
+    environment:
+      - GIN_MODE=debug
+    volumes:
+      # Bind-mount the repo root (two levels up from this compose file) for hot
+      # reload. air (configured to poll) watches it and recompiles in place. The
+      # module + build caches live in the image (pre-warmed in the dev stage),
+      # so we deliberately do NOT mount volumes over /go/pkg/mod or
+      # /root/.cache/go-build — that keeps reloads fast and avoids recompiling
+      # heavy deps. Re-run `just docker-dev` after changing dependencies.
+      - ../..:/app
+      # Anonymous volume shadows the bind mount at /app/tmp so air's compiled
+      # binary lives on the container's (executable) fs, never on the host.
+      - /app/tmp

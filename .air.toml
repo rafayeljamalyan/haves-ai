@@ -1,0 +1,30 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  # -p 2 caps parallel compiles to keep peak memory in check on small Docker VMs.
+  cmd = "go build -p 2 -o ./tmp/haves ."
+  # air runs the binary as `sh -c <full_bin>`. Prefixing with `exec` makes the
+  # shell REPLACE itself with the server (one process, not a forked child), so
+  # on reload air's signal reaches the server directly. Without exec, killing
+  # the shell orphans the server, which keeps holding :8080 and makes every
+  # subsequent rebuild fail to bind. Runtime env (GIN_MODE) comes from compose.
+  full_bin = "exec ./tmp/haves"
+  kill_delay = "2s"
+  send_interrupt = true
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["tmp", "bin", "vendor"]
+  # delay gives the bind mount a moment to settle before building, so the
+  # compiler reads the fully-written file (not a half-synced one).
+  delay = 1200
+  stop_on_error = true
+  # Poll instead of inotify: file events don't cross the macOS/Windows Docker
+  # bind mount, so polling is what makes air actually notice host edits.
+  poll = true
+  poll_interval = 500
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

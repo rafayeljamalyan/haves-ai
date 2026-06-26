@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Build artifacts
+/bin
+/tmp
+haves
+*.exe
+*.out
+*.test
+coverage.out
+
+# Env / local
+.env
+.env.local
+
+# Editor / OS
+.DS_Store
+.idea
+.vscode
+
+# Docs / meta
+README.md
+*.md

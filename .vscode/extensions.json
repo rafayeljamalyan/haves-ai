@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "golang.go",
+    "skellock.just",
+    "docker.docker",
+    "ms-azuretools.vscode-docker"
+  ]
+}

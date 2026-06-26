@@ -9,7 +9,13 @@ import (
 func main() {
 	srv := server.New()
 
-	if err := srv.Run(":8080"); err != nil {
+	port := "8080"
+
+	log.Printf("server started on port %v", port)
+
+	if err := srv.Run(":" + port); err != nil {
 		log.Fatalf("server failed to start: %v", err)
+	} else {
+		log.Printf("server started on port %v", port)
 	}
 }
