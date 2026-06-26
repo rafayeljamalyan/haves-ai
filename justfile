@@ -2,8 +2,6 @@
 
 set shell := ["bash", "-uc"]
 
-# Dev compose file lives under docker/dev/.
-compose := "docker compose -f docker/dev/docker-compose.yml"
 
 # Default: show available recipes.
 default:
@@ -42,25 +40,28 @@ check: fmt vet tidy
 
 # --- Docker dev -------------------------------------------------------------
 
+# Dev compose file lives under docker/dev/.
+dev-compose := "docker compose -f docker/dev/docker-compose.yml -p haves-dev"
+
 # Start the dev stack with hot reload (foreground, logs attached).
 docker-dev:
-    {{compose}} up --build
+    {{dev-compose}} up --build
 
 # Same, detached.
 docker-dev-d:
-    {{compose}} up --build -d
+    {{dev-compose}} up --build -d
 
 # Stop and remove the dev stack.
 docker-dev-down:
-    {{compose}} down
+    {{dev-compose}} down
 
 # Tail logs from the running stack.
 docker-dev-logs:
-    {{compose}} logs -f
+    {{dev-compose}} logs -f
 
 # Open a shell inside the running app container.
 docker-dev-sh:
-    {{compose}} exec app bash
+    {{dev-compose}} exec app bash
 
 # --- Docker prod ------------------------------------------------------------
 
